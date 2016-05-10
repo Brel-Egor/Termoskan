@@ -1,0 +1,1 @@
+jssc.jar , webcam-capture-0.3.10(http://webcam-capture.sarxos.pl/)

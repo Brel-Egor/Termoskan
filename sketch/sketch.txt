@@ -1,0 +1,215 @@
+#include <i2cmaster.h>
+#include <Servo.h>
+
+
+Servo lr; 
+Servo ud; 
+int lrpin = 9; 
+int udpin = 8; 
+char st1[30];
+long int count = 0;
+int mlr;
+int mud;
+int blr;
+int bud;
+int lines = 48;
+int rows = 64;
+char c = 0;
+float celcius=0;
+float fahrenheit=0;
+int dev = 0x5A<<1;
+int data_low = 0;
+int data_high = 0;
+int pec = 0;
+double tempFactor = 0.02; 
+double tempData = 0x0000; 
+int frac; 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+void setup(){
+Serial.begin(9600);
+mlr = 1275; 
+mud = 1750; 
+blr = 1275; 
+bud = 1750;
+i2c_init(); 
+PORTC = (1 << PORTC4) | (1 << PORTC5);
+ud.attach(udpin); 
+lr.attach(lrpin); 
+  
+ud.writeMicroseconds(mud); 
+lr.writeMicroseconds(mlr); 
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
+void loop(){
+if( Serial.available() > 0 )
+    {
+        c = Serial.read();
+        switch( c )
+        {
+            case 'a':
+                measure();
+            break;
+            case 'b':
+                middleleft();
+            break;
+            case 'c':
+                middleright();
+            break;
+            case 'd':
+                middleup();
+            break;
+            case 'e':
+                middledown();
+            break;      
+            case 'g':
+                bottomleft();
+            break;
+            case 'h':
+                bottomright();
+            break;
+            case 'i':
+                bottomup();
+            break;
+            case 'j':
+                bottomdown();
+            break;
+            case 'l':
+                gotomiddle();
+            break;
+            case 'm':
+                gotobottom();
+            break;
+            case 'n':
+                res1();
+            break;
+            case 'o':
+                res2();
+            break;
+            case 'p':
+                res3();
+            break;
+            case 'q':
+                res4();
+            break;
+        }
+    }
+}
+void middleleft(){ //move middle pos left
+   mlr += 10;
+   lr.writeMicroseconds(mlr);
+   ud.writeMicroseconds(mud);
+ }
+void middleright(){ //move middle pos right
+   mlr -= 10;
+   lr.writeMicroseconds(mlr);
+   ud.writeMicroseconds(mud);
+ }
+void middleup(){ // move middle pos up
+   mud += 10;
+   ud.writeMicroseconds(mud);
+   lr.writeMicroseconds(mlr);
+ }
+ void middledown(){ //move middle pos down
+   mud -= 10;
+   ud.writeMicroseconds(mud);
+   lr.writeMicroseconds(mlr);
+ }
+void bottomleft(){ //move bottom-left pos left
+   blr += 10;
+   lr.writeMicroseconds(blr);
+   ud.writeMicroseconds(bud);
+ }
+void bottomright(){ //move bottom-left pos right
+   blr -= 10;
+   lr.writeMicroseconds(blr);
+   ud.writeMicroseconds(bud);
+ } 
+void bottomup(){ //move bottom-left pos up
+   bud += 10;
+   ud.writeMicroseconds(bud);
+   lr.writeMicroseconds(blr);
+ }
+void bottomdown(){ //move bottom-left pos down
+   bud -= 10;
+   ud.writeMicroseconds(bud);
+   lr.writeMicroseconds(blr);
+ }
+void gotomiddle(){ //go to middle pos
+   ud.writeMicroseconds(mud);
+   lr.writeMicroseconds(mlr);
+ }
+void gotobottom(){ //go to bottom-left pos
+   ud.writeMicroseconds(bud);
+   lr.writeMicroseconds(blr);
+ }
+void res1(){ //set resolution to 64x48
+   rows = 64;
+   lines = 48;
+ }
+void res2(){ //set resolution to 48x36
+   rows = 48;
+   lines = 36;
+ }
+void res3(){ //set resolution to 32x24
+   rows = 32;
+   lines = 24;
+ }
+void res4(){ //set resolution to 16x12
+   rows = 16;
+   lines = 12;
+ }
+
+void measure(){
+  int ypos = bud;
+  ud.writeMicroseconds(ypos);
+  int xpos = blr;
+  lr.writeMicroseconds(xpos);
+  delay(50);
+  for(int x=0;x<rows;x++){
+        for(int y=0;y<lines;y++){
+           read_temperature(); 
+           if(y != lines-1){
+           ypos += (int) ((mud-bud)*2)/(lines-1);
+           ud.writeMicroseconds(ypos);
+           }
+           delay(50);
+        }
+      for(int i=0;i<(lines+1);i++){
+      ypos -= (int) ((mud-bud)*2)/(lines-1);
+      ud.writeMicroseconds(ypos);
+      delay(5);
+      } 
+      if(x != rows-1){  
+        xpos -= (int) ((blr-mlr)*2)/(rows-1);
+        lr.writeMicroseconds(xpos);
+      } 
+      ypos += (int) ((mud-bud)*2)/(lines-1);
+      delay(50);
+      ypos += (int) ((mud-bud)*2)/(lines-1);
+      delay(50);
+    }
+}
+
+void read_temperature()
+{
+  data_low = 0;
+  data_high = 0;
+  pec = 0;
+  i2c_start_wait(dev+I2C_WRITE);
+  i2c_write(0x07);
+
+  i2c_rep_start(dev+I2C_READ);
+  data_low = i2c_readAck(); 
+  data_high = i2c_readAck(); 
+  pec = i2c_readNak();
+  i2c_stop();
+  tempData = (double)(((data_high & 0x007F)<< 8) + data_low);
+  tempData = (tempData * tempFactor)-0.01;
+  celcius = tempData - 273.15;
+  fahrenheit = (celcius*1.8) + 32;
+  Serial.print("Celcius: ");
+  Serial.println(celcius);
+}
+

@@ -209,7 +209,6 @@ void read_temperature()
   tempData = (tempData * tempFactor)-0.01;
   celcius = tempData - 273.15;
   fahrenheit = (celcius*1.8) + 32;
-  Serial.print("Celcius: ");
   Serial.println(celcius);
 }
 
